@@ -45,7 +45,7 @@ export const appDefinitions = [
     description: 'Datos directos de contacto y perfiles profesionales.',
     keywords: ['contacto', 'linkedin', 'github', 'email', 'telefono', 'mendoza'],
     desktopPosition: { row: 0, column: 1 },
-    initialWindow: { left: 1460, top: 28, width: 540, height: 745 },
+    initialWindow: { left: 1460, top: 28, width: 560, height: 745 },
     minSize: { width: 420, height: 560 },
     windowVariant: 'standard',
     allowMinimize: true,
