@@ -8,14 +8,17 @@ import lupaUrl from '../../../imagenes/lupa.webp';
 const staticPinnedItems = [{ id: 'search', title: 'Buscar', iconSrc: lupaUrl, type: 'system' }];
 const STANDARD_VIEWPORT_WIDTH = 1440;
 const STANDARD_VIEWPORT_HEIGHT = 900;
-const TASKBAR_BASE_WIDTH = 1408;
-const TASKBAR_BASE_HEIGHT = 66;
-const TASKBAR_MIN_SCALE = 0.68;
-const DESKTOP_TASKBAR_SIDE_GAP = 70;
-const DESKTOP_TASKBAR_BOTTOM_GAP = 8;
+const TASKBAR_BASE_HEIGHT = 74;
+const DESKTOP_TASKBAR_SIDE_GAP = 150;
+const DESKTOP_TASKBAR_BOTTOM_GAP = 18;
+const DESKTOP_TASKBAR_MIN_SIDE_GAP = 28;
+const DESKTOP_TASKBAR_SIDE_GAP_FALLBACK_WIDTH = 1040;
+const DESKTOP_TASKBAR_ITEM_SIZE = 58;
+const DESKTOP_TASKBAR_ICON_SIZE = 52;
+const DESKTOP_TASKBAR_MIN_SCALE = 0.72;
 const MOBILE_BREAKPOINT = 768;
 const MOBILE_TASKBAR_SIDE_GAP = 22;
-const MOBILE_TASKBAR_BOTTOM_GAP = 18;
+const MOBILE_TASKBAR_BOTTOM_GAP = 34;
 const MOBILE_TASKBAR_MIN_ICON_SIZE = 60;
 const MOBILE_TASKBAR_MAX_ICON_SIZE = 72;
 const MOBILE_VISIBLE_TASKBAR_IDS = ['search', 'about', 'contact', 'guide'];
@@ -24,11 +27,51 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function getTaskbarScale(width, height) {
+function getDesktopTaskbarSideGap(width) {
+  if (width >= STANDARD_VIEWPORT_WIDTH) {
+    return DESKTOP_TASKBAR_SIDE_GAP;
+  }
+
+  if (width <= DESKTOP_TASKBAR_SIDE_GAP_FALLBACK_WIDTH) {
+    return DESKTOP_TASKBAR_MIN_SIDE_GAP;
+  }
+
+  const progress = (width - DESKTOP_TASKBAR_SIDE_GAP_FALLBACK_WIDTH) / (STANDARD_VIEWPORT_WIDTH - DESKTOP_TASKBAR_SIDE_GAP_FALLBACK_WIDTH);
+
+  return DESKTOP_TASKBAR_MIN_SIDE_GAP + ((DESKTOP_TASKBAR_SIDE_GAP - DESKTOP_TASKBAR_MIN_SIDE_GAP) * progress);
+}
+
+function getDesktopTaskbarScale(width, height) {
   const widthScale = width / STANDARD_VIEWPORT_WIDTH;
   const heightScale = height / STANDARD_VIEWPORT_HEIGHT;
 
-  return clamp(Math.min(widthScale, heightScale), TASKBAR_MIN_SCALE, 1);
+  return clamp(Math.min(widthScale, heightScale), DESKTOP_TASKBAR_MIN_SCALE, 1);
+}
+
+function getDesktopTaskbarMetrics(width, height) {
+  const scale = getDesktopTaskbarScale(width, height);
+  const compression = clamp((1120 - width) / 340, 0, 1);
+
+  return {
+    contentGap: (18 - (12 * compression)) * scale,
+    groupGap: (8 - (4 * compression)) * scale,
+    groupPaddingX: (12 - (4 * compression)) * scale,
+    groupPaddingY: (6 - compression) * scale,
+    groupRadius: (20 - compression) * scale,
+    iconSize: (DESKTOP_TASKBAR_ICON_SIZE - compression) * scale,
+    itemSize: (DESKTOP_TASKBAR_ITEM_SIZE - (2 * compression)) * scale,
+    scale,
+    shellPaddingX: (14 - (6 * compression)) * scale,
+    shellRadius: (22 - compression) * scale,
+    shellMinHeight: TASKBAR_BASE_HEIGHT * scale,
+    trayGap: (12 - (4 * compression)) * scale,
+    trayIconSize: (16 - compression) * scale,
+    trayPaddingX: (12 - (3 * compression)) * scale,
+    trayPaddingY: (8 - compression) * scale,
+    trayRadius: (18 - compression) * scale,
+    trayTextSize: (14 - compression) * scale,
+    trayWidth: (124 - (32 * compression)) * scale,
+  };
 }
 
 function getMobileTaskbarMetrics(width) {
@@ -44,7 +87,7 @@ function getMobileTaskbarMetrics(width) {
   };
 }
 
-function SystemTray() {
+function SystemTray({ gap = 12, iconSize = 16, paddingX = 12, paddingY = 8, radius = 18, textSize = 14, width = 124 }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -71,17 +114,25 @@ function SystemTray() {
   );
 
   return (
-    <div className="hidden items-center gap-3 rounded-[18px] bg-[rgba(255,255,255,0.32)] px-3 py-2 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] md:flex">
-      <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-slate-600">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+    <div
+      className="hidden items-center justify-end bg-[rgba(255,255,255,0.32)] text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] md:flex"
+      style={{
+        borderRadius: `${radius}px`,
+        gap: `${gap}px`,
+        minWidth: `${width}px`,
+        padding: `${paddingY}px ${paddingX}px`,
+      }}
+    >
+      <span aria-hidden="true" className="flex items-center justify-center text-slate-600" style={{ height: `${iconSize}px`, width: `${iconSize}px` }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ height: `${iconSize}px`, width: `${iconSize}px` }}>
           <path d="M5 9.5V14.5H8.5L13 18V6L8.5 9.5H5Z" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M16 9C17.2 10.1 17.8 11.2 17.8 12C17.8 12.8 17.2 13.9 16 15" strokeLinecap="round" />
           <path d="M18.5 6.8C20.4 8.5 21.5 10.2 21.5 12C21.5 13.8 20.4 15.5 18.5 17.2" strokeLinecap="round" />
         </svg>
       </span>
 
-      <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-slate-600">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <span aria-hidden="true" className="flex items-center justify-center text-slate-600" style={{ height: `${iconSize}px`, width: `${iconSize}px` }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ height: `${iconSize}px`, width: `${iconSize}px` }}>
           <path d="M12 18H12.01" strokeLinecap="round" />
           <path d="M8.2 14.2C10.3 12.1 13.7 12.1 15.8 14.2" strokeLinecap="round" />
           <path d="M5.5 11.5C9.1 7.9 14.9 7.9 18.5 11.5" strokeLinecap="round" />
@@ -89,7 +140,11 @@ function SystemTray() {
         </svg>
       </span>
 
-      <time dateTime={currentTime.toISOString()} className="min-w-[3.5rem] text-right text-sm font-medium tabular-nums text-slate-800">
+      <time
+        dateTime={currentTime.toISOString()}
+        className="min-w-[3.5rem] text-right font-medium tabular-nums text-slate-800"
+        style={{ fontSize: `${textSize}px` }}
+      >
         {formattedTime}
       </time>
     </div>
@@ -249,21 +304,25 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
     () => getMobileTaskbarMetrics(viewport.width),
     [viewport.width],
   );
-  const desktopAvailableWidth = Math.max(viewport.width - (DESKTOP_TASKBAR_SIDE_GAP * 2), 0);
-  const taskbarScale = useMemo(
-    () => getTaskbarScale(isMobile ? viewport.width : desktopAvailableWidth, viewport.height),
-    [desktopAvailableWidth, isMobile, viewport.height, viewport.width],
+  const desktopTaskbarSideGap = useMemo(
+    () => getDesktopTaskbarSideGap(viewport.width),
+    [viewport.width],
   );
-  const taskbarSideGap = isMobile ? mobileTaskbarMetrics.sideGap : DESKTOP_TASKBAR_SIDE_GAP;
+  const desktopAvailableWidth = Math.max(viewport.width - (desktopTaskbarSideGap * 2), 0);
+  const desktopTaskbarMetrics = useMemo(
+    () => getDesktopTaskbarMetrics(viewport.width, viewport.height),
+    [viewport.height, viewport.width],
+  );
+  const taskbarSideGap = isMobile ? mobileTaskbarMetrics.sideGap : desktopTaskbarSideGap;
   const taskbarWidth = useMemo(
     () => (isMobile
-      ? Math.min(TASKBAR_BASE_WIDTH * taskbarScale, Math.max(viewport.width - taskbarSideGap * 2, 0))
+      ? Math.max(viewport.width - taskbarSideGap * 2, 0)
       : desktopAvailableWidth),
-    [desktopAvailableWidth, isMobile, taskbarScale, taskbarSideGap, viewport.width],
+    [desktopAvailableWidth, isMobile, taskbarSideGap, viewport.width],
   );
   const taskbarHeight = useMemo(
-    () => TASKBAR_BASE_HEIGHT * taskbarScale,
-    [taskbarScale],
+    () => (isMobile ? mobileTaskbarMetrics.buttonSize + (mobileTaskbarMetrics.containerPaddingY * 2) : desktopTaskbarMetrics.shellMinHeight),
+    [desktopTaskbarMetrics.shellMinHeight, isMobile, mobileTaskbarMetrics.buttonSize, mobileTaskbarMetrics.containerPaddingY],
   );
   const taskbarBottomGap = isMobile ? MOBILE_TASKBAR_BOTTOM_GAP : DESKTOP_TASKBAR_BOTTOM_GAP;
 
@@ -331,7 +390,7 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
         </div>
       ) : (
         <div
-          className="pointer-events-auto relative mx-auto"
+          className="pointer-events-auto mx-auto"
           style={{
             height: `${taskbarHeight}px`,
             marginBottom: `${taskbarBottomGap}px`,
@@ -339,17 +398,28 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
           }}
         >
           <div
-            className="absolute left-1/2 top-0 origin-bottom"
+            className="grid h-full w-full items-center rounded-[22px] border border-white/50 bg-[rgba(238,242,251,0.68)] shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px]"
             style={{
-              height: `${TASKBAR_BASE_HEIGHT}px`,
-              transform: `translateX(-50%) scale(${taskbarScale})`,
-              transformOrigin: 'bottom center',
-              width: `${TASKBAR_BASE_WIDTH}px`,
+              borderRadius: `${desktopTaskbarMetrics.shellRadius}px`,
+              columnGap: `${desktopTaskbarMetrics.contentGap}px`,
+              gridTemplateColumns: `minmax(0, 1fr) auto minmax(${desktopTaskbarMetrics.trayWidth}px, 1fr)`,
+              minHeight: `${desktopTaskbarMetrics.shellMinHeight}px`,
+              padding: `0 ${desktopTaskbarMetrics.shellPaddingX}px`,
             }}
           >
-            <div className="relative flex h-[66px] w-[88rem] rounded-[22px] border border-white/50 bg-[rgba(238,242,251,0.68)] pl-3 pr-3 shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px] md:pr-36">
-              <div className="flex flex-1 items-center justify-center">
-                <div className="flex items-center gap-2 rounded-[20px] bg-[rgba(255,255,255,0.32)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+            <div aria-hidden="true" />
+
+            <div
+              className="justify-self-center"
+            >
+              <div
+                className="flex items-center bg-[rgba(255,255,255,0.32)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]"
+                style={{
+                  borderRadius: `${desktopTaskbarMetrics.groupRadius}px`,
+                  gap: `${desktopTaskbarMetrics.groupGap}px`,
+                  padding: `${desktopTaskbarMetrics.groupPaddingY}px ${desktopTaskbarMetrics.groupPaddingX}px`,
+                }}
+              >
                   {taskbarItems.map((app, index) => {
                     const windowItem = windowMap.get(app.id);
                     const isOpen = Boolean(windowItem?.isOpen);
@@ -360,9 +430,11 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
                       <TaskbarItem
                         key={app.id}
                         app={app}
+                        iconSize={desktopTaskbarMetrics.iconSize}
                         isActive={isActive}
                         isOpen={isOpen}
                         isSearchOpen={isSearchOpen}
+                        itemSize={desktopTaskbarMetrics.itemSize}
                         layoutSignature={layoutSignature}
                         onBoundsChange={onItemBoundsChange}
                         onItemClick={onItemClick}
@@ -374,12 +446,19 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
                       />
                     );
                   })}
-                </div>
               </div>
+            </div>
 
-              <div className="absolute right-3 top-1/2 hidden -translate-y-1/2 md:block">
-                <SystemTray />
-              </div>
+            <div className="justify-self-end">
+              <SystemTray
+                gap={desktopTaskbarMetrics.trayGap}
+                iconSize={desktopTaskbarMetrics.trayIconSize}
+                paddingX={desktopTaskbarMetrics.trayPaddingX}
+                paddingY={desktopTaskbarMetrics.trayPaddingY}
+                radius={desktopTaskbarMetrics.trayRadius}
+                textSize={desktopTaskbarMetrics.trayTextSize}
+                width={desktopTaskbarMetrics.trayWidth}
+              />
             </div>
           </div>
         </div>

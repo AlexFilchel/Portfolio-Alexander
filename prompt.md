@@ -1,126 +1,56 @@
-Desarrolla una actualización completa de la aplicación “Mis proyectos” dentro del portfolio, manteniendo la estética, arquitectura y comportamiento visual actual.
+Quiero que ajustes el comportamiento responsive de la barra de tareas de mi página estilo escritorio.
 
- Objetivo
+PROBLEMA ACTUAL:
+Actualmente, cuando la pantalla se achica, parece que toda la interfaz o la barra de tareas se reduce usando `scale` o un comportamiento similar. Eso NO es lo que quiero.
 
-Reemplazar los proyectos existentes por un único proyecto tipo ecommerce, incorporando una vista interactiva con navegación entre listado y detalle.
+COMPORTAMIENTO DESEADO:
+Quiero que la barra de tareas mantenga su tamaño visual normal y que se adapte achicando sus espacios internos de forma progresiva, no escalando todo el componente. Sin tocar el estilo mobile, ese esta bien
 
- Cambios iniciales
-Eliminar todos los proyectos actuales.
-Agregar un único proyecto (por ahora), preparado para escalar a múltiples proyectos en el futuro.
- Vista principal (Listado de proyectos)
-Contenido:
-Mostrar una tarjeta de proyecto destacada.
-El elemento principal debe ser un GIF animado ubicado en:
-videos/videoVesper.gif
-Diseño:
-El GIF debe ser el foco visual principal.
-Mantener estilos existentes (bordes, sombras, tipografía, espaciado).
-Debajo del GIF agregar un botón:
+OBJETIVO PRINCIPAL:
+Cuando el ancho de la pantalla disminuya:
+1. La barra de tareas NO debe achicarse con `transform: scale(...)`.
+2. La barra debe seguir teniendo una distancia constante respecto al borde inferior de la pantalla.
+3. También debe mantener, en lo posible, una distancia constante respecto a los costados.
+4. Si la pantalla se vuelve más chica, primero debe reducirse el ancho útil interno de la barra, no escalar toda la barra.
+5. El bloque de la derecha donde está la hora debe ir desplazándose progresivamente hacia el centro.
+6. En consecuencia, los extremos vacíos izquierdo y derecho de la barra deben ir reduciéndose.
+7. Los iconos centrales deben mantenerse centrados visualmente dentro de la barra.
+8. Solo cuando el ancho sea realmente muy pequeño, se puede reducir un poco el margen lateral externo, pero recién después de haber comprimido el espacio interno de la barra. sin tocar el estilo mobile, ese esta bien
+9. No quiero que el contenido se vea “miniaturizado”; quiero reflujo de layout, no escalado.
 
-Botón: Detalles
+REQUERIMIENTOS DE IMPLEMENTACIÓN:
+- Revisar y eliminar cualquier uso de `transform: scale()`, `zoom`, o lógica similar aplicada a la barra de tareas o a su contenedor principal.
+- Implementar un layout responsive real usando Flexbox o Grid.
+- La barra de tareas debe tener:
+  - un contenedor principal fijo o absoluto abajo
+  - ancho responsive real
+  - padding horizontal adaptable
+  - distribución interna flexible
+- El sector derecho (hora, wifi, volumen, etc.) debe estar dentro de un contenedor independiente que pueda acercarse al centro a medida que disminuye el ancho disponible.
+- El grupo central de iconos debe permanecer estable y visualmente centrado.
+- El ancho de la barra debe adaptarse con `width`, `max-width`, `min-width`, `clamp()`, `calc()` o media queries, pero NO con scale.
+- Mantener una separación inferior constante.
+- Mantener separación lateral constante mientras haya espacio suficiente.
+- En pantallas pequeñas, priorizar:
+  1. reducir espacios internos vacíos,
+  2. acercar el bloque derecho al centro,
+  3. recién después reducir márgenes laterales externos.
 
-Interacción (muy importante)
+ESTRUCTURA ESPERADA:
+Quiero que analices la estructura actual y la refactors si hace falta para que la barra tenga una lógica parecida a esta:
+- contenedor exterior alineado abajo
+- barra de tareas con ancho fluido
+- zona izquierda flexible o vacía
+- zona central con iconos
+- zona derecha con hora y estado
+La idea es que las zonas laterales sean las que cedan espacio cuando se achique la pantalla, no que se reduzca toda la barra visualmente.
 
-Al hacer clic en “Detalles”:
+IMPORTANTE:
+- No romper el diseño actual.
+- No cambiar el estilo visual general.
+- No tocar tamaños de iconos salvo que sea estrictamente necesario en breakpoints muy chicos.
+- Priorizar una solución limpia, responsive y mantenible.
+- Si actualmente hay wrappers que fuerzan escalado, eliminarlos o reemplazarlos por una solución de layout real.
+- Quiero que el resultado se comporte como una barra de tareas real: conserva su presencia visual, pero reorganiza sus espacios internos cuando falta ancho.
+No cambiar el diseño mobile (es a partir de cuando cambia la imagen del fondo)
 
-Se debe reemplazar completamente todo el contenido debajo del contenedor “Mis proyectos”.
-No debe haber navegación a otra página (todo ocurre dentro de la misma vista/app).
-Debe ocultarse el listado de proyectos.
- Vista de detalle del proyecto
-Estructura:
-1. Navegación
-Agregar una flecha en la esquina superior izquierda, justo debajo del header “Mis proyectos”.
-Esta flecha permite volver al listado de proyectos.
-2. Contenido principal
-Mostrar el GIF (videoVesper.gif) en un tamaño más grande que en la vista anterior.
-3. Descripción (IMPORTANTE: dejar espacio editable)
-
-Incluir secciones bien estructuradas para completar posteriormente:
-
-Descripción del proyecto:
-La aplicación fue desarrollada en el frontend con HTML, CSS y JavaScript vanilla, mientras que el backend está implementado con Java y Spring Boot. La seguridad se resuelve con Auth0 + JWT, la persistencia con MySQL + JPA, la gestión de imágenes con Cloudinary y los pagos con integración a Mercado Pago y Ualá. A nivel de despliegue, el sistema puede ejecutarse en contenedores gracias a Docker y Docker Compose
-Tecnologías utilizadas:
-
-
-
-Frontend
-- HTML
-- CSS
-- JavaScript 
-
-
-
-Backend
-- Java 21
-- Spring Boot
-- Spring Web
-- Spring Security
-- Spring Data JPA
-- Hibernate
-- Bean Validation
-- Lombok
-
-Base de datos e integraciones
-- MySQL
-- Auth0
-- Cloudinary
-- Mercado Pago SDK
-- Ualá
-
-
-Despliegue
-- Docker
-- Docker Compose
-
-Características principales:
-
-
-- Catálogo público de productos
-- Búsqueda de productos por término
-- Filtros por tipo, género, marca y precio
-- Carrito de compras
-- Checkout con selección de método de pago
-- Integración con Mercado Pago y Ualá
-- Registro y autenticación de usuarios con Auth0
-- Perfil de usuario editable
-- Panel de administración protegido por roles
-- Gestión de productos destacados
-- Subida de imágenes para productos
-- Diseño responsive para desktop y mobile
-
-
-Detalles técnicos / arquitectura (opcional):
-
-
-- Arquitectura por capas en backend: controller, service, repo, entity, dto, config.
-- Autorización basada en roles usando JWT y claims personalizados de Auth0.
-- Modelo de dominio extensible con herencia JPA 
-- Persistencia relacional con MySQL.
-- Carga de imágenes externalizada en Cloudinary.
-- Manejo global de errores con respuestas JSON uniformes.
-- Containerización con Docker multi-stage y base de datos orquestada con Docker Compose.
-
-
- Diseño y UX
-Mantener consistencia total con la estética actual:
-Colores
-Tipografía
-Espaciados
-Componentes UI
-Transiciones suaves entre vista listado y detalle.
-Jerarquía visual clara (GIF → info).
-📱 Responsive
-Debe adaptarse correctamente a:
-Desktop
-Tablet
-Mobile
-El GIF debe escalar adecuadamente sin romper layout.
-Botones y navegación accesibles en pantallas pequeñas.
-⚙️ Requisitos técnicos
-Arquitectura preparada para agregar más proyectos en el futuro.
-Separar lógica de:
-Vista listado
-Vista detalle
-Evitar recargas de página (SPA behavior).
-
-recuerda utilizar la skill de react que agregue anteriormente.
