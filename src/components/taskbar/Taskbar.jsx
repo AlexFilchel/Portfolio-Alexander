@@ -18,7 +18,7 @@ const DESKTOP_TASKBAR_ICON_SIZE = 52;
 const DESKTOP_TASKBAR_MIN_SCALE = 0.72;
 const MOBILE_BREAKPOINT = 768;
 const MOBILE_TASKBAR_SIDE_GAP = 22;
-const MOBILE_TASKBAR_BOTTOM_GAP = 34;
+const MOBILE_TASKBAR_BOTTOM_GAP = 42;
 const MOBILE_TASKBAR_MIN_ICON_SIZE = 60;
 const MOBILE_TASKBAR_MAX_ICON_SIZE = 72;
 const MOBILE_VISIBLE_TASKBAR_IDS = ['search', 'about', 'contact', 'guide'];
@@ -325,6 +325,9 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
     [desktopTaskbarMetrics.shellMinHeight, isMobile, mobileTaskbarMetrics.buttonSize, mobileTaskbarMetrics.containerPaddingY],
   );
   const taskbarBottomGap = isMobile ? MOBILE_TASKBAR_BOTTOM_GAP : DESKTOP_TASKBAR_BOTTOM_GAP;
+  const searchPanelBottomOffset = isMobile
+    ? taskbarHeight + taskbarBottomGap
+    : TASKBAR_BASE_HEIGHT;
 
   if (isHidden) {
     return null;
@@ -334,6 +337,7 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
     <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-[200]">
       <SearchPanel
         apps={apps}
+        bottomOffset={searchPanelBottomOffset}
         query={searchQuery}
         isOpen={isSearchOpen}
         onQueryChange={setSearchQuery}
@@ -348,7 +352,7 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
         <div
           className="pointer-events-auto mx-auto"
           style={{
-            marginBottom: `${taskbarBottomGap}px`,
+            marginBottom: `calc(${taskbarBottomGap}px + env(safe-area-inset-bottom, 0px))`,
             width: `${Math.max(viewport.width - mobileTaskbarMetrics.sideGap * 2, 0)}px`,
           }}
         >

@@ -3,7 +3,7 @@ import { AppIcon } from '../common/AppIcon';
 import { classNames } from '../../utils/classNames';
 import lupaUrl from '../../../imagenes/lupa.webp';
 
-export function SearchPanel({ apps, query, isOpen, onQueryChange, onClose, onOpenApp }) {
+export function SearchPanel({ apps, bottomOffset = 74, query, isOpen, onQueryChange, onClose, onOpenApp }) {
   const inputRef = useRef(null);
   const panelRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -78,7 +78,10 @@ export function SearchPanel({ apps, query, isOpen, onQueryChange, onClose, onOpe
     >
       <section
         ref={panelRef}
-        className="absolute bottom-[74px] left-1/2 z-[210] flex max-h-[min(70vh,42rem)] w-[min(38rem,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-[26px] border border-white/50 bg-[rgba(240,244,252,0.82)] shadow-[0_32px_80px_rgba(15,23,42,0.35)] backdrop-blur-[30px]"
+        className="absolute left-1/2 z-[210] flex max-h-[min(70vh,42rem)] w-[min(38rem,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-[26px] border border-white/50 bg-[rgba(240,244,252,0.82)] shadow-[0_32px_80px_rgba(15,23,42,0.35)] backdrop-blur-[30px]"
+        style={{
+          bottom: `calc(${bottomOffset}px + env(safe-area-inset-bottom, 0px))`,
+        }}
         onMouseDown={() => {
           window.requestAnimationFrame(() => inputRef.current?.focus());
         }}
