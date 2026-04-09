@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useViewportSize } from './useViewportSize';
 
 const STORAGE_KEY = 'portfolio-alex-desktop-icons';
-const ICON_WIDTH = 116;
-const ICON_HEIGHT = 126;
+const BASE_ICON_WIDTH = 116;
+const BASE_ICON_HEIGHT = 126;
 const TASKBAR_HEIGHT = 74;
 const DRAG_THRESHOLD = 6;
 const GRID_TARGET_COLUMNS = 16;
@@ -15,9 +15,36 @@ const GRID_TOP_PADDING = 20;
 const GRID_BOTTOM_PADDING = 16;
 const STANDARD_VIEWPORT_WIDTH = 1440;
 const STANDARD_VIEWPORT_HEIGHT = 900;
+const MIN_ICON_SCALE = 0.72;
+const MIN_GRID_ROWS = GRID_TARGET_ROWS - 2;
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_MIN_ICON_SCALE = 0.84;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getResponsiveScale(width, height) {
+  const widthScale = width / STANDARD_VIEWPORT_WIDTH;
+  const heightScale = height / STANDARD_VIEWPORT_HEIGHT;
+  const minScale = width < MOBILE_BREAKPOINT ? MOBILE_MIN_ICON_SCALE : MIN_ICON_SCALE;
+
+  return clamp(Math.min(widthScale, heightScale), minScale, 1);
+}
+
+function getIconMetrics(width, height) {
+  const scale = getResponsiveScale(width, height);
+
+  return {
+    scale,
+    iconWidth: Math.round(BASE_ICON_WIDTH * scale),
+    iconHeight: Math.round(BASE_ICON_HEIGHT * scale),
+    horizontalGap: Math.round(GRID_HORIZONTAL_GAP * scale),
+    verticalGap: Math.round(GRID_VERTICAL_GAP * scale),
+    sidePadding: Math.round(GRID_SIDE_PADDING * scale),
+    topPadding: Math.round(GRID_TOP_PADDING * scale),
+    bottomPadding: Math.round(GRID_BOTTOM_PADDING * scale),
+  };
 }
 
 function getDefaultAssignments(apps) {
@@ -32,26 +59,32 @@ function getDefaultAssignments(apps) {
 }
 
 function getGridMetrics(width, height) {
-  const safeWidth = Math.max(width, ICON_WIDTH + GRID_SIDE_PADDING * 2);
-  const safeHeight = Math.max(height - TASKBAR_HEIGHT, ICON_HEIGHT + GRID_TOP_PADDING + GRID_BOTTOM_PADDING);
-  const innerWidth = Math.max(safeWidth - GRID_SIDE_PADDING * 2, ICON_WIDTH);
-  const innerHeight = Math.max(safeHeight - GRID_TOP_PADDING - GRID_BOTTOM_PADDING, ICON_HEIGHT);
+  const metrics = getIconMetrics(width, height);
+  const maxRows = width < MOBILE_BREAKPOINT ? GRID_TARGET_ROWS - 1 : GRID_TARGET_ROWS;
+  const minRows = width < MOBILE_BREAKPOINT ? MIN_GRID_ROWS - 1 : MIN_GRID_ROWS;
+  const safeWidth = Math.max(width, metrics.iconWidth + metrics.sidePadding * 2);
+  const safeHeight = Math.max(height - TASKBAR_HEIGHT, metrics.iconHeight + metrics.topPadding + metrics.bottomPadding);
+  const innerWidth = Math.max(safeWidth - metrics.sidePadding * 2, metrics.iconWidth);
+  const innerHeight = Math.max(safeHeight - metrics.topPadding - metrics.bottomPadding, metrics.iconHeight);
   const standardInnerWidth = STANDARD_VIEWPORT_WIDTH - GRID_SIDE_PADDING * 2;
   const standardInnerHeight = STANDARD_VIEWPORT_HEIGHT - TASKBAR_HEIGHT - GRID_TOP_PADDING - GRID_BOTTOM_PADDING;
-  const targetCellWidth = Math.max(standardInnerWidth / GRID_TARGET_COLUMNS, ICON_WIDTH + GRID_HORIZONTAL_GAP);
-  const targetCellHeight = Math.max(standardInnerHeight / GRID_TARGET_ROWS, ICON_HEIGHT + GRID_VERTICAL_GAP);
+  const targetCellWidth = Math.max(standardInnerWidth / GRID_TARGET_COLUMNS, metrics.iconWidth + metrics.horizontalGap);
+  const targetCellHeight = Math.max(standardInnerHeight / GRID_TARGET_ROWS, metrics.iconHeight + metrics.verticalGap);
   const columns = Math.max(1, Math.round(innerWidth / targetCellWidth));
-  const rows = Math.max(1, Math.round(innerHeight / targetCellHeight));
+  const rows = clamp(Math.round(innerHeight / targetCellHeight), minRows, maxRows);
 
   return {
     columns,
     rows,
     cellWidth: innerWidth / columns,
     cellHeight: innerHeight / rows,
-    minLeft: GRID_SIDE_PADDING,
-    maxLeft: safeWidth - ICON_WIDTH - GRID_SIDE_PADDING,
-    minTop: GRID_TOP_PADDING,
-    maxTop: safeHeight - ICON_HEIGHT - GRID_BOTTOM_PADDING,
+    iconScale: metrics.scale,
+    iconWidth: metrics.iconWidth,
+    iconHeight: metrics.iconHeight,
+    minLeft: metrics.sidePadding,
+    maxLeft: safeWidth - metrics.iconWidth - metrics.sidePadding,
+    minTop: metrics.topPadding,
+    maxTop: safeHeight - metrics.iconHeight - metrics.bottomPadding,
   };
 }
 
@@ -60,22 +93,22 @@ function getCellKey(cell) {
 }
 
 function getCellPosition(cell, grid) {
-  const centerX = GRID_SIDE_PADDING + cell.column * grid.cellWidth + grid.cellWidth / 2;
-  const centerY = GRID_TOP_PADDING + cell.row * grid.cellHeight + grid.cellHeight / 2;
+  const centerX = grid.minLeft + cell.column * grid.cellWidth + grid.cellWidth / 2;
+  const centerY = grid.minTop + cell.row * grid.cellHeight + grid.cellHeight / 2;
 
   return {
-    left: clamp(centerX - ICON_WIDTH / 2, grid.minLeft, grid.maxLeft),
-    top: clamp(centerY - ICON_HEIGHT / 2, grid.minTop, grid.maxTop),
+    left: clamp(centerX - grid.iconWidth / 2, grid.minLeft, grid.maxLeft),
+    top: clamp(centerY - grid.iconHeight / 2, grid.minTop, grid.maxTop),
   };
 }
 
 function getNearestCell(position, grid) {
-  const centerX = position.left + ICON_WIDTH / 2;
-  const centerY = position.top + ICON_HEIGHT / 2;
+  const centerX = position.left + grid.iconWidth / 2;
+  const centerY = position.top + grid.iconHeight / 2;
 
   return {
-    column: clamp(Math.round((centerX - GRID_SIDE_PADDING - grid.cellWidth / 2) / grid.cellWidth), 0, grid.columns - 1),
-    row: clamp(Math.round((centerY - GRID_TOP_PADDING - grid.cellHeight / 2) / grid.cellHeight), 0, grid.rows - 1),
+    column: clamp(Math.round((centerX - grid.minLeft - grid.cellWidth / 2) / grid.cellWidth), 0, grid.columns - 1),
+    row: clamp(Math.round((centerY - grid.minTop - grid.cellHeight / 2) / grid.cellHeight), 0, grid.rows - 1),
   };
 }
 
@@ -338,6 +371,7 @@ export function useDesktopIconLayout(apps) {
 
   return {
     draggingIconId,
+    iconScale: grid.iconScale,
     positions,
     shouldSuppressOpen,
     startDrag,

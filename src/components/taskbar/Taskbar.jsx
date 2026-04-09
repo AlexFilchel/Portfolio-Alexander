@@ -1,10 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '../common/AppIcon';
 import { classNames } from '../../utils/classNames';
+import { useViewportSize } from '../../hooks/useViewportSize';
 import { SearchPanel } from './SearchPanel';
 import lupaUrl from '../../../imagenes/lupa.webp';
 
 const staticPinnedItems = [{ id: 'search', title: 'Buscar', iconSrc: lupaUrl, type: 'system' }];
+const STANDARD_VIEWPORT_WIDTH = 1440;
+const STANDARD_VIEWPORT_HEIGHT = 900;
+const TASKBAR_BASE_WIDTH = 1408;
+const TASKBAR_BASE_HEIGHT = 66;
+const TASKBAR_MIN_SCALE = 0.68;
+const DESKTOP_TASKBAR_SIDE_GAP = 70;
+const DESKTOP_TASKBAR_BOTTOM_GAP = 8;
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_TASKBAR_SIDE_GAP = 22;
+const MOBILE_TASKBAR_BOTTOM_GAP = 18;
+const MOBILE_TASKBAR_MIN_ICON_SIZE = 60;
+const MOBILE_TASKBAR_MAX_ICON_SIZE = 72;
+const MOBILE_VISIBLE_TASKBAR_IDS = ['search', 'about', 'contact', 'guide'];
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getTaskbarScale(width, height) {
+  const widthScale = width / STANDARD_VIEWPORT_WIDTH;
+  const heightScale = height / STANDARD_VIEWPORT_HEIGHT;
+
+  return clamp(Math.min(widthScale, heightScale), TASKBAR_MIN_SCALE, 1);
+}
+
+function getMobileTaskbarMetrics(width) {
+  const progress = clamp((width - 320) / (MOBILE_BREAKPOINT - 320), 0, 1);
+  const iconSize = MOBILE_TASKBAR_MIN_ICON_SIZE + ((MOBILE_TASKBAR_MAX_ICON_SIZE - MOBILE_TASKBAR_MIN_ICON_SIZE) * progress);
+
+  return {
+    buttonSize: iconSize + 8,
+    containerPaddingX: 12 + (4 * progress),
+    containerPaddingY: 8 + (4 * progress),
+    iconSize,
+    sideGap: 14 + (8 * progress),
+  };
+}
 
 function SystemTray() {
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -58,8 +96,21 @@ function SystemTray() {
   );
 }
 
-function TaskbarItem({ app, isActive, isOpen, isSearchOpen, layoutSignature, onBoundsChange, onItemClick, onOpenApp, setIsSearchOpen, setSearchQuery, showDivider, windowItem }) {
+function TaskbarItem({ app, iconSize = 44, isActive, isMobile = false, isOpen, isSearchOpen, itemSize = 50, layoutSignature, onBoundsChange, onItemClick, onOpenApp, setIsSearchOpen, setSearchQuery, showDivider, windowItem }) {
   const buttonRef = useRef(null);
+  const buttonStyle = {
+    borderRadius: `${Math.max(16, itemSize * 0.32)}px`,
+    height: `${itemSize}px`,
+    width: `${itemSize}px`,
+  };
+  const iconFrameStyle = {
+    borderRadius: `${Math.max(14, iconSize * 0.32)}px`,
+    height: `${iconSize}px`,
+    width: `${iconSize}px`,
+  };
+  const indicatorStyle = {
+    height: `${Math.max(3, itemSize * 0.06)}px`,
+  };
 
   useEffect(() => {
     const button = buttonRef.current;
@@ -116,14 +167,17 @@ function TaskbarItem({ app, isActive, isOpen, isSearchOpen, layoutSignature, onB
         }}
         className={classNames(
           'group relative flex h-[50px] w-[50px] items-center justify-center rounded-[16px] transition duration-150 hover:bg-white/55',
+          isMobile && 'flex-shrink-0',
           isActive && 'bg-white/72 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85)]',
         )}
+        style={buttonStyle}
         aria-label={app.title}
         aria-pressed={app.id === 'search' ? isSearchOpen : isActive}
       >
         <AppIcon
           icon={app.iconSrc ?? app.icon}
           frameClassName="h-[44px] w-[44px] rounded-[14px] border-transparent bg-transparent p-0 shadow-none"
+          frameStyle={iconFrameStyle}
         />
         <span
           className={classNames(
@@ -131,10 +185,11 @@ function TaskbarItem({ app, isActive, isOpen, isSearchOpen, layoutSignature, onB
             isOpen ? 'w-4 opacity-100' : 'w-1.5 opacity-0 group-hover:opacity-50',
             isActive && 'w-6 bg-sky-600',
           )}
+          style={indicatorStyle}
         />
       </button>
 
-      {showDivider ? <span className="mx-1 h-7 w-px bg-slate-300/65" /> : null}
+      {showDivider && !isMobile ? <span className="mx-1 h-7 w-px bg-slate-300/65" /> : null}
     </div>
   );
 }
@@ -142,6 +197,7 @@ function TaskbarItem({ app, isActive, isOpen, isSearchOpen, layoutSignature, onB
 export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds, onItemClick, onItemBoundsChange, onOpenApp }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const viewport = useViewportSize();
 
   const windowMap = useMemo(
     () => new Map(windows.map((windowItem) => [windowItem.id, windowItem])),
@@ -180,10 +236,36 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
     () => [...staticPinnedItems, ...portfolioPinnedApps, ...extraOpenedApps],
     [extraOpenedApps, portfolioPinnedApps],
   );
+  const mobileTaskbarItems = useMemo(
+    () => taskbarItems.filter((item) => MOBILE_VISIBLE_TASKBAR_IDS.includes(item.id)),
+    [taskbarItems],
+  );
   const layoutSignature = useMemo(
     () => taskbarItems.map((item) => item.id).join('|'),
     [taskbarItems],
   );
+  const isMobile = viewport.width < MOBILE_BREAKPOINT;
+  const mobileTaskbarMetrics = useMemo(
+    () => getMobileTaskbarMetrics(viewport.width),
+    [viewport.width],
+  );
+  const desktopAvailableWidth = Math.max(viewport.width - (DESKTOP_TASKBAR_SIDE_GAP * 2), 0);
+  const taskbarScale = useMemo(
+    () => getTaskbarScale(isMobile ? viewport.width : desktopAvailableWidth, viewport.height),
+    [desktopAvailableWidth, isMobile, viewport.height, viewport.width],
+  );
+  const taskbarSideGap = isMobile ? mobileTaskbarMetrics.sideGap : DESKTOP_TASKBAR_SIDE_GAP;
+  const taskbarWidth = useMemo(
+    () => (isMobile
+      ? Math.min(TASKBAR_BASE_WIDTH * taskbarScale, Math.max(viewport.width - taskbarSideGap * 2, 0))
+      : desktopAvailableWidth),
+    [desktopAvailableWidth, isMobile, taskbarScale, taskbarSideGap, viewport.width],
+  );
+  const taskbarHeight = useMemo(
+    () => TASKBAR_BASE_HEIGHT * taskbarScale,
+    [taskbarScale],
+  );
+  const taskbarBottomGap = isMobile ? MOBILE_TASKBAR_BOTTOM_GAP : DESKTOP_TASKBAR_BOTTOM_GAP;
 
   if (isHidden) {
     return null;
@@ -203,22 +285,37 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
         onOpenApp={onOpenApp}
       />
 
-      <div className="pointer-events-auto mx-auto mb-2 h-[66px] w-[min(calc(100%-12px),88rem)] rounded-[22px] border border-white/50 bg-[rgba(238,242,251,0.68)] px-3 shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px]">
-        <div className="relative flex h-full items-center justify-center">
-          <div className="flex items-center gap-2 rounded-[20px] bg-[rgba(255,255,255,0.32)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-            {taskbarItems.map((app, index) => {
+      {isMobile ? (
+        <div
+          className="pointer-events-auto mx-auto"
+          style={{
+            marginBottom: `${taskbarBottomGap}px`,
+            width: `${Math.max(viewport.width - mobileTaskbarMetrics.sideGap * 2, 0)}px`,
+          }}
+        >
+          <div
+            className="flex items-center justify-between rounded-[24px] border border-white/50 bg-[rgba(255,255,255,0.34)] shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px]"
+            style={{
+              minHeight: `${mobileTaskbarMetrics.buttonSize + (mobileTaskbarMetrics.containerPaddingY * 2)}px`,
+              padding: `${mobileTaskbarMetrics.containerPaddingY}px ${mobileTaskbarMetrics.containerPaddingX}px`,
+            }}
+          >
+            {mobileTaskbarItems.map((app, index) => {
               const windowItem = windowMap.get(app.id);
               const isOpen = Boolean(windowItem?.isOpen);
               const isActive = (activeWindowId === app.id && !windowItem?.isMinimized) || (app.id === 'search' && isSearchOpen);
-              const showDivider = index === staticPinnedItems.length - 1;
+              const showDivider = index === 0;
 
               return (
                 <TaskbarItem
                   key={app.id}
                   app={app}
+                  iconSize={mobileTaskbarMetrics.iconSize}
                   isActive={isActive}
+                  isMobile
                   isOpen={isOpen}
                   isSearchOpen={isSearchOpen}
+                  itemSize={mobileTaskbarMetrics.buttonSize}
                   layoutSignature={layoutSignature}
                   onBoundsChange={onItemBoundsChange}
                   onItemClick={onItemClick}
@@ -231,12 +328,62 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
               );
             })}
           </div>
+        </div>
+      ) : (
+        <div
+          className="pointer-events-auto relative mx-auto"
+          style={{
+            height: `${taskbarHeight}px`,
+            marginBottom: `${taskbarBottomGap}px`,
+            width: `${taskbarWidth}px`,
+          }}
+        >
+          <div
+            className="absolute left-1/2 top-0 origin-bottom"
+            style={{
+              height: `${TASKBAR_BASE_HEIGHT}px`,
+              transform: `translateX(-50%) scale(${taskbarScale})`,
+              transformOrigin: 'bottom center',
+              width: `${TASKBAR_BASE_WIDTH}px`,
+            }}
+          >
+            <div className="relative flex h-[66px] w-[88rem] rounded-[22px] border border-white/50 bg-[rgba(238,242,251,0.68)] pl-3 pr-3 shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px] md:pr-36">
+              <div className="flex flex-1 items-center justify-center">
+                <div className="flex items-center gap-2 rounded-[20px] bg-[rgba(255,255,255,0.32)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+                  {taskbarItems.map((app, index) => {
+                    const windowItem = windowMap.get(app.id);
+                    const isOpen = Boolean(windowItem?.isOpen);
+                    const isActive = (activeWindowId === app.id && !windowItem?.isMinimized) || (app.id === 'search' && isSearchOpen);
+                    const showDivider = index === staticPinnedItems.length - 1;
 
-          <div className="absolute right-0 hidden md:block">
-            <SystemTray />
+                    return (
+                      <TaskbarItem
+                        key={app.id}
+                        app={app}
+                        isActive={isActive}
+                        isOpen={isOpen}
+                        isSearchOpen={isSearchOpen}
+                        layoutSignature={layoutSignature}
+                        onBoundsChange={onItemBoundsChange}
+                        onItemClick={onItemClick}
+                        onOpenApp={onOpenApp}
+                        setIsSearchOpen={setIsSearchOpen}
+                        setSearchQuery={setSearchQuery}
+                        showDivider={showDivider}
+                        windowItem={windowItem}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="absolute right-3 top-1/2 hidden -translate-y-1/2 md:block">
+                <SystemTray />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </footer>
   );
 }

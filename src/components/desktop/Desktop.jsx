@@ -4,7 +4,7 @@ import { useDesktopIconLayout } from '../../hooks/useDesktopIconLayout';
 
 export function Desktop({ apps, onOpenApp, wallpaperUrl }) {
   const [selectedIconId, setSelectedIconId] = useState(null);
-  const { draggingIconId, positions, shouldSuppressOpen, startDrag } = useDesktopIconLayout(apps);
+  const { draggingIconId, iconScale, positions, shouldSuppressOpen, startDrag } = useDesktopIconLayout(apps);
 
   return (
     <div
@@ -37,6 +37,7 @@ export function Desktop({ apps, onOpenApp, wallpaperUrl }) {
           >
             <DesktopIcon
               app={app}
+              iconScale={iconScale}
               isDragging={draggingIconId === app.id}
               isSelected={selectedIconId === app.id}
               onOpen={onOpenApp}

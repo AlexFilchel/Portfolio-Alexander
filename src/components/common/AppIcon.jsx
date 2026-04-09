@@ -128,7 +128,7 @@ const iconMap = {
   store: StoreIcon,
 };
 
-export function AppIcon({ icon, className, frameClassName = '' }) {
+export function AppIcon({ icon, className, frameClassName = '', frameStyle }) {
   const IconComponent = iconMap[icon] ?? CvIcon;
   const isImageIcon = typeof icon === 'string' && (/^(https?:|data:|blob:)/.test(icon) || icon.startsWith('/'));
 
@@ -138,6 +138,7 @@ export function AppIcon({ icon, className, frameClassName = '' }) {
         'flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(246,249,255,0.74))] p-[3px] text-slate-700 shadow-[0_14px_30px_rgba(21,101,192,0.18)]',
         frameClassName,
       )}
+      style={frameStyle}
     >
       <span className={classNames('block h-full w-full rounded-[14px] text-slate-700', className)}>
         {isImageIcon ? (
