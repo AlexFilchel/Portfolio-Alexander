@@ -85,7 +85,13 @@ function App() {
   }, [closeWindow]);
 
   return (
-    <div className="relative h-screen overflow-hidden text-[13px] text-slate-800 selection:bg-sky-500/30">
+    <div
+      className="relative overflow-hidden text-[13px] text-slate-800 selection:bg-sky-500/30"
+      style={{
+        minHeight: '100svh',
+        height: '100dvh',
+      }}
+    >
       <Desktop apps={appDefinitions} onOpenApp={openWindow} wallpaperUrl={currentWallpaperUrl} />
 
       <main className="pointer-events-none absolute inset-0">
