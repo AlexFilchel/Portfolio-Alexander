@@ -6,6 +6,58 @@ import lupaUrl from '../../../imagenes/lupa.webp';
 
 const staticPinnedItems = [{ id: 'search', title: 'Buscar', iconSrc: lupaUrl, type: 'system' }];
 
+function SystemTray() {
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date());
+    };
+
+    updateTime();
+
+    const intervalId = window.setInterval(updateTime, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const formattedTime = useMemo(
+    () =>
+      currentTime.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [currentTime],
+  );
+
+  return (
+    <div className="hidden items-center gap-3 rounded-[18px] bg-[rgba(255,255,255,0.32)] px-3 py-2 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] md:flex">
+      <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-slate-600">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+          <path d="M5 9.5V14.5H8.5L13 18V6L8.5 9.5H5Z" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 9C17.2 10.1 17.8 11.2 17.8 12C17.8 12.8 17.2 13.9 16 15" strokeLinecap="round" />
+          <path d="M18.5 6.8C20.4 8.5 21.5 10.2 21.5 12C21.5 13.8 20.4 15.5 18.5 17.2" strokeLinecap="round" />
+        </svg>
+      </span>
+
+      <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center text-slate-600">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+          <path d="M12 18H12.01" strokeLinecap="round" />
+          <path d="M8.2 14.2C10.3 12.1 13.7 12.1 15.8 14.2" strokeLinecap="round" />
+          <path d="M5.5 11.5C9.1 7.9 14.9 7.9 18.5 11.5" strokeLinecap="round" />
+          <path d="M2.8 8.8C7.9 3.7 16.1 3.7 21.2 8.8" strokeLinecap="round" />
+        </svg>
+      </span>
+
+      <time dateTime={currentTime.toISOString()} className="min-w-[3.5rem] text-right text-sm font-medium tabular-nums text-slate-800">
+        {formattedTime}
+      </time>
+    </div>
+  );
+}
+
 function TaskbarItem({ app, isActive, isOpen, isSearchOpen, layoutSignature, onBoundsChange, onItemClick, onOpenApp, setIsSearchOpen, setSearchQuery, showDivider, windowItem }) {
   const buttonRef = useRef(null);
 
@@ -152,7 +204,7 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
       />
 
       <div className="pointer-events-auto mx-auto mb-2 h-[66px] w-[min(calc(100%-12px),88rem)] rounded-[22px] border border-white/50 bg-[rgba(238,242,251,0.68)] px-3 shadow-[0_18px_44px_rgba(15,23,42,0.2)] backdrop-blur-[28px]">
-        <div className="flex h-full items-center justify-center">
+        <div className="relative flex h-full items-center justify-center">
           <div className="flex items-center gap-2 rounded-[20px] bg-[rgba(255,255,255,0.32)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
             {taskbarItems.map((app, index) => {
               const windowItem = windowMap.get(app.id);
@@ -178,6 +230,10 @@ export function Taskbar({ apps, isHidden, windows, activeWindowId, pinnedAppIds,
                 />
               );
             })}
+          </div>
+
+          <div className="absolute right-0 hidden md:block">
+            <SystemTray />
           </div>
         </div>
       </div>
